@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import urllib.request
 
@@ -43,7 +44,11 @@ def updates(pins: dict, whisper: str, ffmpeg: str) -> list[str]:
 
 
 def _fetch(url: str) -> str:
-    request = urllib.request.Request(url, headers={"User-Agent": "BungeeMindVoice-update-check"})
+    headers = {"User-Agent": "BungeeMindVoice-update-check"}
+    token = os.environ.get("GH_TOKEN")
+    if token and url.startswith("https://api.github.com/"):
+        headers["Authorization"] = "Bearer " + token
+    request = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(request, timeout=60) as response:
         return response.read().decode("utf-8", errors="replace")
 
