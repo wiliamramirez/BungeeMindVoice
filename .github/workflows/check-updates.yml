@@ -2,7 +2,7 @@ name: Check upstream versions
 
 on:
   schedule:
-    - cron: "0 13 * * 1"
+    - cron: "0 13 1,15 * *"
   workflow_dispatch:
 
 permissions:

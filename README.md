@@ -40,4 +40,4 @@ El manifest registra las versiones de whisper.cpp y FFmpeg, y para cada paquete:
 
 ## Versiones nuevas
 
-`check-updates.yml` corre cada lunes (y a mano con `workflow_dispatch`) y compara `pins.json` con el último release estable de whisper.cpp y el último tarball de FFmpeg. Por cada versión más nueva abre un issue, una sola vez aunque después se cierre. No cambia los pins ni publica nada: actualizar es decidir, editar `pins.json`, probar y crear un tag nuevo.
+`check-updates.yml` corre los días 1 y 15 de cada mes (y a mano con `workflow_dispatch`) y compara `pins.json` con el último release estable de whisper.cpp y el último tarball de FFmpeg. Por cada versión más nueva abre un issue, una sola vez aunque después se cierre. No cambia los pins ni publica nada: actualizar es decidir, editar `pins.json`, probar y crear un tag nuevo.
