@@ -10,6 +10,16 @@ import build
 
 
 class BuildOptionsTests(unittest.TestCase):
+    def test_windows_build_script_normalizes_arch_and_checks_sdk_libraries(self):
+        script = (Path(__file__).resolve().parents[1] / "scripts" / "build-windows.cmd").read_text(encoding="ascii")
+        self.assertIn('if /I "%TARGET_ARCH%"=="ARM64" set "TARGET_ARCH=arm64"', script)
+        self.assertIn('if /I "%HOST_ARCH%"=="ARM64" set "HOST_ARCH=arm64"', script)
+        self.assertIn('if /I "%TARGET_ARCH%"=="amd64" set "TARGET_DIR=x64"', script)
+        self.assertIn('if /I "%HOST_ARCH%"=="amd64" set "HOST_DIR=x64"', script)
+        self.assertIn('Host%HOST_DIR%\\%TARGET_DIR%', script)
+        self.assertIn('set "SDK_UM_DIR=%WindowsSdkDir%Lib\\%WindowsSDKVersion%um\\%TARGET_DIR%"', script)
+        self.assertIn('findstr /I /L /C:"%SDK_UM_DIR%"', script)
+
     def test_ffmpeg_patch_reduces_cli_filter_selection(self):
         original = (
             b'ffmpeg_select="aformat_filter anull_filter atrim_filter crop_filter\n'
