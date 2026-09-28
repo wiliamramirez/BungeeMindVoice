@@ -32,12 +32,16 @@ jobs:
       BMV_VERSION: ${{ github.event_name == 'push' && github.ref_name || format('workflow-{0}', github.run_number) }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
       - if: runner.os == 'Windows'
         uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e
+        id: msys2
         with:
           msystem: MSYS
           update: true
-          install: make
+          path-type: inherit
+          install: make diffutils
       - if: runner.os == 'Windows'
         run: python -m unittest discover -s tests
       - if: runner.os != 'Windows'
@@ -45,6 +49,8 @@ jobs:
       - if: runner.os == 'Windows'
         shell: pwsh
         run: .\scripts\build-windows.cmd ${{ matrix.target }} ${{ matrix.target == 'windows-arm64' && 'ARM64' || 'x64' }} ${{ runner.arch == 'ARM64' && 'ARM64' || 'x64' }}
+        env:
+          BMV_MSYS2_BASH: ${{ steps.msys2.outputs.msys2-location }}\usr\bin\bash.exe
       - if: runner.os != 'Windows'
         shell: bash
         run: python3 scripts/build.py --target "${{ matrix.target }}" --output "dist/${{ matrix.target }}"
@@ -63,6 +69,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           path: dist

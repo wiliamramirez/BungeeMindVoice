@@ -122,11 +122,9 @@ def _whisper_options(target: str, build_dir: Path) -> list[str]:
     if os_name == "windows":
         options.extend((
             "-G",
-            "Visual Studio 17 2022",
-            "-A",
-            "ARM64" if arch == "arm64" else "x64",
-            "-T",
-            "ClangCL",
+            "Ninja",
+            "-DCMAKE_C_COMPILER=clang-cl",
+            "-DCMAKE_CXX_COMPILER=clang-cl",
             "-DCMAKE_POLICY_DEFAULT_CMP0091=NEW",
             "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
         ))
@@ -200,30 +198,45 @@ def _cygpath(path: Path) -> str:
     return result.stdout.strip()
 
 
+def _windows_build_environment() -> tuple[str, str]:
+    bash = os.environ.get("BMV_MSYS2_BASH")
+    if not bash or not Path(bash).is_file():
+        raise RuntimeError("No se encontro el bash de MSYS2; configura BMV_MSYS2_BASH con la ruta de setup-msys2")
+    msvc_bin = os.environ.get("BMV_MSVC_BIN")
+    if not msvc_bin or not (Path(msvc_bin) / "link.exe").is_file():
+        raise RuntimeError("No se encontro link.exe de MSVC en BMV_MSVC_BIN")
+    return bash, _cygpath(Path(msvc_bin))
+
+
+def _msys_command(script: str, msvc_bin: str) -> str:
+    return "export PATH=" + shlex.quote(msvc_bin) + ":$PATH; " + script
+
+
 def build_ffmpeg(target: str, source: Path, work: Path, stage: Path) -> Path:
     prefix = work / "ffmpeg-install"
     shutil.rmtree(prefix, ignore_errors=True)
     _patch_ffmpeg_cli(source)
     options = _ffmpeg_options(target, prefix)
     if platform.system() == "Windows":
-        bash = shutil.which("bash")
-        if not bash or not shutil.which("make"):
-            raise RuntimeError("El build de FFmpeg en Windows requiere MSYS2 bash y make")
+        bash, msvc_bin = _windows_build_environment()
+        if not shutil.which("make"):
+            raise RuntimeError("El build de FFmpeg en Windows requiere make de MSYS2")
         command = " && ".join((
             f"cd {shlex.quote(_cygpath(source))}",
-            "./configure " + " ".join(shlex.quote(option) for option in options),
+            "which cl && which link && ./configure " + " ".join(shlex.quote(option) for option in options),
         ))
-        run([bash, "-lc", command])
+        run([bash, "-lc", _msys_command(command, msvc_bin)])
     else:
         run(["./configure", *options], cwd=source)
     _verify_ffmpeg_config(source / "ffbuild" / "config.mak")
     if platform.system() == "Windows":
+        bash, msvc_bin = _windows_build_environment()
         command = " && ".join((
             f"cd {shlex.quote(_cygpath(source))}",
             "make -j2",
             "make install",
         ))
-        run([bash, "-lc", command])
+        run([bash, "-lc", _msys_command(command, msvc_bin)])
     else:
         run(["make", f"-j{max(2, os.cpu_count() or 2)}"], cwd=source)
         run(["make", "install"], cwd=source)
@@ -283,6 +296,10 @@ def main() -> int:
     parser.add_argument("--output", type=Path, default=ROOT / "dist")
     args = parser.parse_args()
     host_matches(args.target)
+    if platform.system() == "Windows":
+        _windows_build_environment()
+        if not shutil.which("make") or not shutil.which("which"):
+            raise RuntimeError("El build de Windows requiere make y diffutils de MSYS2 en PATH")
     work = ROOT / "build" / args.target
     cache = ROOT / "build" / "downloads"
     whisper_archive = fetch(PINS["whisper_cpp"], cache, "whisper-" + PINS["whisper_cpp"]["version"] + ".tar.gz")

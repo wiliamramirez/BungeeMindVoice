@@ -94,7 +94,20 @@ class BuildOptionsTests(unittest.TestCase):
         self.assertIn("--arch=aarch64", options)
         whisper = build._whisper_options("windows-arm64", Path("build"))
         self.assertIn("-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded", whisper)
-        self.assertIn("ARM64", whisper)
+        self.assertIn("-G", whisper)
+        self.assertIn("Ninja", whisper)
+        self.assertIn("-DCMAKE_C_COMPILER=clang-cl", whisper)
+        self.assertIn("-DCMAKE_CXX_COMPILER=clang-cl", whisper)
+
+    def test_msys_command_prioritizes_msvc_before_msys_link(self):
+        command = build._msys_command("which cl && which link && ./configure", "/c/msvc/bin")
+        self.assertTrue(command.startswith("export PATH=/c/msvc/bin:$PATH; "))
+        self.assertIn("which cl && which link && ./configure", command)
+
+    def test_windows_build_requires_explicit_msys2_bash(self):
+        with patch.dict(build.os.environ, {}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, "BMV_MSYS2_BASH"):
+                build._windows_build_environment()
 
     def test_windows_x86_instruction_baseline_is_explicit(self):
         options = build._whisper_options("windows-x86_64", Path("build"))
