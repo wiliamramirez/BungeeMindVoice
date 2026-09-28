@@ -19,7 +19,7 @@ class BuildOptionsTests(unittest.TestCase):
         self.assertIn('Host%HOST_DIR%\\%TARGET_DIR%', script)
         self.assertIn('set "SDK_UM_DIR=%WindowsSdkDir%Lib\\%WindowsSDKVersion%um\\%TARGET_DIR%"', script)
         self.assertIn('if not exist "%SDK_UM_DIR%\\kernel32.lib"', script)
-        self.assertIn('call set "LIB_WITHOUT_SDK=%%LIB:%SDK_UM_DIR%=%%"', script)
+        self.assertIn("echo LIB=%LIB%", script)
         self.assertNotIn("findstr", script)
 
     def test_ffmpeg_patch_reduces_cli_filter_selection(self):

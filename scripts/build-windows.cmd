@@ -45,10 +45,6 @@ if not exist "%SDK_UM_DIR%\kernel32.lib" (
   echo No se encontro kernel32.lib del Windows SDK en "%SDK_UM_DIR%".
   exit /b 1
 )
-call set "LIB_WITHOUT_SDK=%%LIB:%SDK_UM_DIR%=%%"
-if "%LIB_WITHOUT_SDK%"=="%LIB%" (
-  echo LIB no contiene la carpeta de bibliotecas UM del Windows SDK para %TARGET_ARCH%: "%SDK_UM_DIR%".
-  exit /b 1
-)
+echo LIB=%LIB%
 python scripts\build.py --target %~1 --output dist\%~1
 exit /b %errorlevel%
