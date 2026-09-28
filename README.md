@@ -15,7 +15,7 @@ Cada Release publica un archivo por plataforma. Los nombres `os` y `arch` del ma
 | Linux | x86_64 | `ubuntu-22.04` | glibc 2.35 |
 | Linux | arm64 | `ubuntu-22.04-arm` | glibc 2.35 |
 
-Los paquetes x86_64 requieren una CPU x86-64-v3. whisper.cpp activa explícitamente SSE4.2, AVX, AVX2, BMI2, FMA y F16C; AVX2 implica FMA y F16C en el toolchain MSVC usado para Windows. Los binarios arm64 fijan ARMv8-A, sin extensiones del procesador del runner. En macOS, Metal está activado y su biblioteca queda embebida en `whisper-cli`.
+Los paquetes x86_64 requieren una CPU x86-64-v3. whisper.cpp activa explícitamente SSE4.2, AVX, AVX2, BMI2, FMA y F16C; AVX2 implica FMA y F16C en el toolchain MSVC usado para Windows. Los binarios arm64 fijan ARMv8-A, sin extensiones del procesador del runner. En macOS arm64, Metal está activado y su biblioteca queda embebida en `whisper-cli`. En macOS x86_64 Metal está desactivado y la transcripción usa solo la CPU: en el runner Intel la GPU virtual colgó `whisper-cli` de forma intermitente, y en esos Mac la GPU aporta poco.
 
 El deployment target mínimo es macOS 12.0 en ambas arquitecturas. whisper.cpp 1.9.4 usa una API Metal disponible desde esa versión; el pin aplica el mismo mínimo a CMake y FFmpeg mediante `-mmacosx-version-min`.
 

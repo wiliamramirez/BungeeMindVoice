@@ -81,6 +81,12 @@ class BuildOptionsTests(unittest.TestCase):
         self.assertIn("-DGGML_METAL=ON", options)
         self.assertIn("-DGGML_METAL_EMBED_LIBRARY=ON", options)
 
+    def test_macos_intel_builds_without_metal(self):
+        options = build._whisper_options("macos-x86_64", Path("build"))
+        self.assertIn("-DCMAKE_OSX_DEPLOYMENT_TARGET=12.0", options)
+        self.assertIn("-DGGML_METAL=OFF", options)
+        self.assertNotIn("-DGGML_METAL=ON", options)
+
     def test_ffmpeg_is_restricted_to_audio_and_file_io(self):
         options = build._ffmpeg_options("linux-arm64", Path("/tmp/prefix"))
         for option in (

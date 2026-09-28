@@ -113,6 +113,9 @@ def _whisper_options(target: str, build_dir: Path) -> list[str]:
         options.extend((
             f"-DCMAKE_OSX_ARCHITECTURES={arch}",
             f"-DCMAKE_OSX_DEPLOYMENT_TARGET={deployment}",
+        ))
+    if os_name == "macos" and arch == "arm64":
+        options.extend((
             "-DGGML_METAL=ON",
             "-DGGML_METAL_EMBED_LIBRARY=ON",
             "-DGGML_METAL_MACOSX_VERSION_MIN=" + deployment,
