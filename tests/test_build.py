@@ -104,6 +104,12 @@ class BuildOptionsTests(unittest.TestCase):
         self.assertTrue(command.startswith("export PATH=/c/msvc/bin:$PATH; "))
         self.assertIn("which cl && which link && ./configure", command)
 
+    def test_ffmpeg_tools_are_checked_inside_msys2(self):
+        with patch.object(build, "_cygpath", return_value="/c/source"):
+            command = build._ffmpeg_configure_command(Path("C:/source"), ["--enable-static"])
+        self.assertIn("command -v make && command -v cmp", command)
+        self.assertIn("which cl && which link && ./configure --enable-static", command)
+
     def test_windows_build_requires_explicit_msys2_bash(self):
         with patch.dict(build.os.environ, {}, clear=True):
             with self.assertRaisesRegex(RuntimeError, "BMV_MSYS2_BASH"):
