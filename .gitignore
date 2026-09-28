@@ -3,4 +3,5 @@ dist/
 downloads/
 build/
 *.log
+__pycache__/
 .DS_Store

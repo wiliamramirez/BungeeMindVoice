@@ -1,0 +1,7 @@
+--- a/configure
++++ b/configure
+@@ -4378,3 +4378 @@
+-ffmpeg_select="aformat_filter anull_filter atrim_filter crop_filter
+-               format_filter hflip_filter null_filter rotate_filter
+-               transpose_filter trim_filter vflip_filter"
++ffmpeg_select="aformat_filter anull_filter aresample_filter"

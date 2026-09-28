@@ -1,0 +1,108 @@
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+import build
+
+
+class BuildOptionsTests(unittest.TestCase):
+    def test_ffmpeg_patch_reduces_cli_filter_selection(self):
+        original = (
+            b'ffmpeg_select="aformat_filter anull_filter atrim_filter crop_filter\n'
+            b'               format_filter hflip_filter null_filter rotate_filter\n'
+            b'               transpose_filter trim_filter vflip_filter"'
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary)
+            configure = source / "configure"
+            configure.write_bytes(original)
+            build._patch_ffmpeg_cli(source)
+            self.assertEqual(configure.read_bytes(), b'ffmpeg_select="aformat_filter anull_filter aresample_filter"')
+
+    def test_ffmpeg_config_rejects_unrequested_components(self):
+        lines = [
+            "CONFIG_AVCODEC=yes", "CONFIG_AVFILTER=yes", "CONFIG_AVFORMAT=yes", "CONFIG_AVUTIL=yes",
+            "CONFIG_SWRESAMPLE=yes", "CONFIG_FFMPEG=yes", "CONFIG_FILE_PROTOCOL=yes",
+            "CONFIG_OGG_DEMUXER=yes", "CONFIG_MP3_DEMUXER=yes", "CONFIG_MOV_DEMUXER=yes",
+            "CONFIG_FLAC_DEMUXER=yes", "CONFIG_WAV_DEMUXER=yes", "CONFIG_AAC_DECODER=yes",
+            "CONFIG_FLAC_DECODER=yes", "CONFIG_MP3_DECODER=yes", "CONFIG_OPUS_DECODER=yes",
+            "CONFIG_VORBIS_DECODER=yes", "CONFIG_PCM_S16LE_DECODER=yes", "CONFIG_PCM_F32LE_DECODER=yes",
+            "CONFIG_PCM_S16LE_ENCODER=yes", "CONFIG_WAV_MUXER=yes", "CONFIG_AFORMAT_FILTER=yes",
+            "CONFIG_ANULL_FILTER=yes", "CONFIG_ARESAMPLE_FILTER=yes",
+            "CONFIG_AAC_PARSER=yes", "CONFIG_FLAC_PARSER=yes", "CONFIG_MPEGAUDIO_PARSER=yes",
+            "CONFIG_OPUS_PARSER=yes", "CONFIG_VORBIS_PARSER=yes", "CONFIG_FRAME_THREAD_ENCODER=yes",
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            config = Path(temporary) / "config.mak"
+            config.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            build._verify_ffmpeg_config(config)
+            config.write_text("\n".join(lines + ["CONFIG_CROP_FILTER=yes"]) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "Componentes FFmpeg inesperados"):
+                build._verify_ffmpeg_config(config)
+
+    def test_x86_linux_instruction_baseline_is_explicit(self):
+        options = build._whisper_options("linux-x86_64", Path("build"))
+        for option in ("-DGGML_AVX2=ON", "-DGGML_FMA=ON", "-DGGML_F16C=ON", "-DGGML_BMI2=ON"):
+            self.assertIn(option, options)
+        self.assertIn("-DGGML_CPU_ALL_VARIANTS=OFF", options)
+        self.assertIn("-DGGML_BACKEND_DL=OFF", options)
+
+    def test_arm_baseline_is_not_runner_native(self):
+        for target in ("macos-arm64", "linux-arm64", "windows-arm64"):
+            options = build._whisper_options(target, Path("build"))
+            self.assertIn("-DGGML_NATIVE=OFF", options)
+            self.assertIn("-DGGML_CPU_ARM_ARCH=armv8-a", options)
+
+    def test_linux_cxx_runtimes_are_statically_linked(self):
+        whisper = build._whisper_options("linux-x86_64", Path("build"))
+        ffmpeg = build._ffmpeg_options("linux-x86_64", Path("/tmp/prefix"))
+        self.assertIn("-DCMAKE_EXE_LINKER_FLAGS=-static-libgcc -static-libstdc++", whisper)
+        self.assertIn("--extra-ldflags=-static-libgcc -static-libstdc++", ffmpeg)
+
+    def test_macos_deployment_and_embedded_metal_are_explicit(self):
+        options = build._whisper_options("macos-arm64", Path("build"))
+        self.assertIn("-DCMAKE_OSX_DEPLOYMENT_TARGET=12.0", options)
+        self.assertIn("-DGGML_METAL=ON", options)
+        self.assertIn("-DGGML_METAL_EMBED_LIBRARY=ON", options)
+
+    def test_ffmpeg_is_restricted_to_audio_and_file_io(self):
+        options = build._ffmpeg_options("linux-arm64", Path("/tmp/prefix"))
+        for option in (
+            "--disable-everything",
+            "--disable-network",
+            "--enable-protocol=file",
+            "--enable-demuxer=ogg,mp3,mov,flac,wav",
+            "--enable-decoder=opus,vorbis,mp3,aac,flac,pcm_*",
+            "--enable-encoder=pcm_s16le",
+            "--enable-muxer=wav",
+            "--enable-filter=aresample",
+            "--enable-swresample",
+            "--disable-avdevice",
+            "--disable-swscale",
+        ):
+            self.assertIn(option, options)
+        self.assertFalse(any("gpl" in option.lower() or "nonfree" in option.lower() for option in options))
+
+    def test_windows_uses_static_msvc_runtime(self):
+        with patch.object(build, "_cygpath", return_value="/tmp/prefix"):
+            options = build._ffmpeg_options("windows-arm64", Path("C:/prefix"))
+        self.assertIn("--toolchain=msvc", options)
+        self.assertIn("--arch=aarch64", options)
+        whisper = build._whisper_options("windows-arm64", Path("build"))
+        self.assertIn("-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded", whisper)
+        self.assertIn("ARM64", whisper)
+
+    def test_windows_x86_instruction_baseline_is_explicit(self):
+        options = build._whisper_options("windows-x86_64", Path("build"))
+        for option in ("-DGGML_AVX2=ON", "-DGGML_BMI2=ON"):
+            self.assertIn(option, options)
+        self.assertIn("-DGGML_CPU_ALL_VARIANTS=OFF", options)
+        self.assertIn("-DGGML_BACKEND_DL=OFF", options)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -10,8 +10,8 @@
     "sha256": "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e"
   },
   "macos_deployment_targets": {
-    "x86_64": "10.13",
-    "arm64": "11.0"
+    "x86_64": "12.0",
+    "arm64": "12.0"
   },
   "test_model": {
     "name": "tiny",
