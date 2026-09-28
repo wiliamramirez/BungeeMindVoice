@@ -1,0 +1,40 @@
+name: Check upstream versions
+
+on:
+  schedule:
+    - cron: "0 13 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests
+      - name: Open an issue per new upstream version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python3 scripts/check_updates.py > updates.txt
+          if [ ! -s updates.txt ]; then
+            echo "Pins are current."
+            exit 0
+          fi
+          gh issue list --state all --limit 200 --json title --jq '.[].title' > existing.txt
+          while IFS= read -r title; do
+            if grep -Fxq "$title" existing.txt; then
+              echo "Already reported: $title"
+            else
+              gh issue create --title "$title" --body "Upstream published a newer version. Review its changelog, update pins.json (version, source_url, sha256), run workflow_dispatch and tag a new vX.Y.Z if it is worth shipping. BungeeMind keeps using the pinned release until it bumps its own pin."
+            fi
+          done < updates.txt

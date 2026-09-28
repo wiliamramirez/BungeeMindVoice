@@ -37,3 +37,7 @@ El manifest registra las versiones de whisper.cpp y FFmpeg, y para cada paquete:
 - whisper.cpp: MIT. Cada paquete incluye el texto de licencia de la versión empaquetada.
 - FFmpeg: LGPL-2.1-or-later. Cada paquete incluye el texto de licencia, la versión exacta, la línea de configuración utilizada y el enlace al código fuente.
 - La muestra de voz de prueba está generada con eSpeak NG y se publica bajo CC0; su texto, comando de generación y licencia están en [`testdata/README.md`](testdata/README.md).
+
+## Versiones nuevas
+
+`check-updates.yml` corre cada lunes (y a mano con `workflow_dispatch`) y compara `pins.json` con el último release estable de whisper.cpp y el último tarball de FFmpeg. Por cada versión más nueva abre un issue, una sola vez aunque después se cierre. No cambia los pins ni publica nada: actualizar es decidir, editar `pins.json`, probar y crear un tag nuevo.
