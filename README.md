@@ -8,20 +8,22 @@ Cada Release publica un archivo por plataforma. Los nombres `os` y `arch` del ma
 
 | OS | Arquitectura | Runner de Actions | Base mínima |
 | --- | --- | --- | --- |
-| macOS | arm64 | `macos-15` | macOS 11.0 |
-| macOS | x86_64 | `macos-15-intel` | macOS 10.13 |
+| macOS | arm64 | `macos-15` | macOS 12.0 |
+| macOS | x86_64 | `macos-15-intel` | macOS 12.0 |
 | Windows | x86_64 | `windows-2025` | Windows x64 |
 | Windows | arm64 | `windows-11-arm` | Windows ARM64 |
 | Linux | x86_64 | `ubuntu-22.04` | glibc 2.35 |
 | Linux | arm64 | `ubuntu-22.04-arm` | glibc 2.35 |
 
-Los binarios x86_64 de whisper.cpp usan AVX2, FMA y F16C; requieren una CPU x86-64-v3. Los binarios arm64 usan el baseline ARMv8-A, sin optimizaciones específicas del runner. En macOS, Metal está activado y su biblioteca queda embebida en `whisper-cli`.
+Los paquetes x86_64 requieren una CPU x86-64-v3. whisper.cpp activa explícitamente SSE4.2, AVX, AVX2, BMI2, FMA y F16C; AVX2 implica FMA y F16C en el toolchain MSVC usado para Windows. Los binarios arm64 fijan ARMv8-A, sin extensiones del procesador del runner. En macOS, Metal está activado y su biblioteca queda embebida en `whisper-cli`.
+
+El deployment target mínimo es macOS 12.0 en ambas arquitecturas. whisper.cpp 1.9.4 usa una API Metal disponible desde esa versión; el pin aplica el mismo mínimo a CMake y FFmpeg mediante `-mmacosx-version-min`.
 
 ## Contenido y versiones
 
 Las versiones, URL y SHA-256 de los tarballs fuente están centralizados en [`pins.json`](pins.json). El build verifica cada hash antes de extraer o compilar. La primera versión planeada usa whisper.cpp v1.9.4 y FFmpeg 9.0.2.
 
-Cada paquete contiene `whisper-cli`, `ffmpeg` y sus licencias. FFmpeg se configura como LGPL-2.1-or-later, estático, sin autodetección, sin red y con solo los componentes de audio necesarios para Ogg/Opus, Ogg/Vorbis, MP3, M4A/AAC, FLAC y WAV. Convierte al formato WAV PCM de 16 bits, mono y 16 kHz que consume BungeeMind.
+Cada paquete contiene `whisper-cli`, `ffmpeg` y sus licencias. FFmpeg se configura como LGPL-2.1-or-later, estático, sin autodetección, sin red y con los componentes de audio para Ogg/Opus, Ogg/Vorbis, MP3, M4A/AAC, FLAC y WAV. El build aplica un parche LGPL pequeño al selector de filtros de la herramienta FFmpeg para registrar `aformat`, `anull` y `aresample`, los filtros de formato y reescalado de audio que usa la CLI; el parche y su hash van en el paquete. Convierte al formato WAV PCM de 16 bits, mono y 16 kHz que consume BungeeMind.
 
 ## Publicar
 
